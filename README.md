@@ -7,14 +7,20 @@ The interesting parts of this project are the server ("app.js") and the clientsi
 To get started quickly on both windows and linux:
 
 - Install mongo
+- Make sure that mongo is not exposed to the internet, in mongod.conf look for one of those lines
+bind_ip = 127.0.0.1
+bindIp: 127.0.0.1
+- If you changed values in mongod.conf restart mongod to load the new configuration
+- Prepare a strong username and password for the next step, the more random the better
+- In secrets.txt.template find the value of mongodb_string and replace username and password with your own credentials 
 - Open a mongo shell and run:
 
 use wottactics
 
 db.createUser(
    {
-     user: "username",
-     pwd: "password",
+     user: "put the username here",
+     pwd: "put the password here",
      roles: [ "readWrite", "dbAdmin" ]
    }
 )

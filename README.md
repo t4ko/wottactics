@@ -8,22 +8,30 @@ To get started quickly on both windows and linux:
 
 - Install mongo
 - Make sure that mongo is not exposed to the internet, in mongod.conf look for one of those lines
+```python
 bind_ip = 127.0.0.1
+```
+```yaml
 bindIp: 127.0.0.1
+```
 - If you changed values in mongod.conf restart mongod to load the new configuration
 - Prepare a strong username and password for the next step, the more random the better
-- In secrets.txt.template find the value of mongodb_string and replace username and password with your own credentials 
+- In secrets.txt.template find the value of mongodb_string and replace username and password with your own credentials
+```json
+"mongodb_string": "mongodb://<username here>:<password here>@localhost:27017/wottactics"
+``` 
 - Open a mongo shell and run:
-
+```js
 use wottactics
 
 db.createUser(
    {
-     user: "put the username here",
-     pwd: "put the password here",
+     user: "<username here>",
+     pwd: "<password here>",
      roles: [ "readWrite", "dbAdmin" ]
    }
 )
+```
 
 - install redis
 - install nodejs, stable branch

@@ -91,14 +91,14 @@ module.exports.load = function(router, secrets, db, request, escaper) {
 			if (!clan.treasury) {
 				clan.treasury = 0;
 			}
-			db.collection('clans').update({_id:clan._id}, clan, {upsert:true}, function() {
+			db.collection('clans').update({_id:{$eq:clan._id}}, clan, {upsert:true}, function() {
 			  cb(clan);	 			
 			});
 		});
 	}
 	
 	function load_clan(clan_id, refresh, cb) {
-	  db.collection('clans').findOne({_id:clan_id}, function(err, result) {
+	  db.collection('clans').findOne({_id:{$eq:clan_id}}, function(err, result) {
 		if (!err && result) {
 		  if (!refresh) {
 		    cb(result);
@@ -177,13 +177,13 @@ module.exports.load = function(router, secrets, db, request, escaper) {
 		if (!field) {
 			field = "all";
 		}
-		db.collection('ws_' + field + '_summary').findOne({_id:wid}, function(err, result) {
+		db.collection('ws_' + field + '_summary').findOne({_id:{$eq:wid}}, function(err, result) {
 			if (!err && result) {
 				res.status(200).send(JSON.stringify(result));
 			} else {
 				res.status(404).send("");
 			}
-			db.collection('tracked_players').replaceOne({_id:wid}, {_id:wid}, {upsert: true});
+			db.collection('tracked_players').replaceOne({_id:{$eq:wid}}, {_id:wid}, {upsert: true});
 		});	
 	});
 	
@@ -193,13 +193,13 @@ module.exports.load = function(router, secrets, db, request, escaper) {
 		if (!field) {
 			field = "all";
 		}
-		db.collection('ws_clan_' + field + '_summary').findOne({_id:wid}, function(err, result) {
+		db.collection('ws_clan_' + field + '_summary').findOne({_id:{$eq:wid}}, function(err, result) {
 			if (!err && result) {
 				res.status(200).send(JSON.stringify(result));
 			} else {
 				res.status(404).send("");
 			}
-			db.collection('tracked_clans').replaceOne({_id:wid}, {_id:wid}, {upsert: true});
+			db.collection('tracked_clans').replaceOne({_id:{$eq:wid}}, {_id:wid}, {upsert: true});
 		});	
 	});
 	
@@ -234,7 +234,7 @@ module.exports.load = function(router, secrets, db, request, escaper) {
 			
 			clan.treasury = req.body.treasury;
 			clan.multipliers = req.body.multipliers;
-			db.collection('clans').update({_id:clan._id}, {$set: {multipliers:clan.multipliers, treasury:clan.treasury}}, {upsert: true}, function() {
+			db.collection('clans').update({_id:{$eq:clan._id}}, {$set: {multipliers:clan.multipliers, treasury:clan.treasury}}, {upsert: true}, function() {
 				res.send('Success');			
 			});
 		});
@@ -248,8 +248,8 @@ module.exports.load = function(router, secrets, db, request, escaper) {
 			clan.members[i] = {CW:[[0,0], [0,0], [0,0]], SH:[[0,0], [0,0], [0,0]], SK:[[0,0], [0,0], [0,0]], A:0};
 		  }
 		  clan.treasury = 0;
-		  db.collection('clans').update({_id:clan._id}, clan, {upsert: true}, function() {
-			db.collection('battles').update({_id:clan._id}, {}, {upsert: true}, function() {
+		  db.collection('clans').update({_id:{$eq:clan._id}}, clan, {upsert: true}, function() {
+			db.collection('battles').update({_id:{$eq:clan._id}}, {}, {upsert: true}, function() {
 			  res.send('Success');			
 			});	
 		  });

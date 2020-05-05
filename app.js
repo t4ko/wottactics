@@ -145,7 +145,7 @@ MongoClient.connect(connection_string, {reconnectTries:99999999}, function(err, 
 		if (room_data[room]) {
 			room_data[room]._id = room;
 			room_data[room].lastAccessed = Date.now();
-			db.collection('tactics').replaceOne({_id:room}, room_data[room], {upsert: true}, function (err, result) {
+			db.collection('tactics').replaceOne({_id: { $eq: room }}, room_data[room], {upsert: true}, function (err, result) {
 			  cb();
 			});
 		}
@@ -153,7 +153,7 @@ MongoClient.connect(connection_string, {reconnectTries:99999999}, function(err, 
 	
 	function get_tactics(identity, game, cb) {
 		if (identity) {
-			db.collection('users').findOne({_id:identity},{'tactics':1, 'rooms':1}, function(err, data) {
+			db.collection('users').findOne({_id: { $eq: identity }},{'tactics':1, 'rooms':1}, function(err, data) {
 				if (!err) {
 					if (data) {
 						var tactics = [], rooms = [];
@@ -189,10 +189,10 @@ MongoClient.connect(connection_string, {reconnectTries:99999999}, function(err, 
 	function push_tactic_to_db(user, room, name, uid, remove_old) {
 		//store a link to the tacticn in user data
 		var date = Date.now();
-		db.collection('users').updateOne({_id:user.identity}, {$push:{tactics:{name:name, date:date, game:room_data[room].game, uid:uid, is_video:(typeof room_data[room].playing != 'undefined')}}}, {upsert: true} , function(err) {
+		db.collection('users').updateOne({_id: { $eq: user.identity }}, {$push:{tactics:{name:name, date:date, game:room_data[room].game, uid:uid, is_video:(typeof room_data[room].playing != 'undefined')}}}, {upsert: true} , function(err) {
 			if (!err && remove_old) {
 				try {
-					db.collection('users').updateOne({_id:user.identity}, {$pull: {tactics:{uid:uid, date:{$ne:date}}}}, {upsert: true});
+					db.collection('users').updateOne({_id: { $eq: user.identity }}, {$pull: {tactics:{uid:uid, date:{$ne:date}}}}, {upsert: true});
 				} catch(e) {} //probably doesn't exist
 			}
 		});		
@@ -210,7 +210,7 @@ MongoClient.connect(connection_string, {reconnectTries:99999999}, function(err, 
 		data.users[user.identity] = "owner";
 		
 		data._id = uid;
-		db.collection('stored_tactics').replaceOne({_id:uid}, data, {upsert: true});
+		db.collection('stored_tactics').replaceOne({_id: { $eq: uid }}, data, {upsert: true});
 
 		if (!room_data[room].lost_identities[user.identity]) {
 			room_data[room].lost_identities[user.identity] = {role: "owner"};
@@ -236,12 +236,12 @@ MongoClient.connect(connection_string, {reconnectTries:99999999}, function(err, 
 	
 	function restore_tactic(user, uid, cb) {
 		if (user.identity) {
-			var query = {_id:user.identity};
-			query['tactics.uid'] = uid;
+			var query = {_id: { $eq: user.identity }};
+			query['tactics.uid'] = { $eq: uid };
 			db.collection('users').findOne(query, {'tactics.$':1, _id:0}, function(err, header) {
 				if (!err && header) {
 					var id = header.tactics[0].uid;
-					db.collection('stored_tactics').findOne({_id:id}, function(err2, result) {
+					db.collection('stored_tactics').findOne({_id:{ $eq:id}}, function(err2, result) {
 						if (!err2 && result) {							
 							var uid = newUid();
 							room_data[uid] = result;
@@ -270,18 +270,18 @@ MongoClient.connect(connection_string, {reconnectTries:99999999}, function(err, 
 	}
 	
 	function remove_tactic(identity, id) {
-		db.collection('users').updateOne({_id:identity}, {$pull: {tactics:{uid:id}}});
+		db.collection('users').updateOne({_id: { $eq: identity }}, {$pull: {tactics:{uid:id}}});
 	}
 	
 	function rename_tactic(user, uid, new_name) {
-		db.collection('users').findOne({_id:user.identity, tactics:{$elemMatch:{uid:uid}}},{'tactics.$':1}, function(err, result) {
+		db.collection('users').findOne({_id:{$eq:user.identity}, tactics:{$elemMatch:{uid:uid}}},{'tactics.$':1}, function(err, result) {
 			if (!err && result && result.tactics) {
 				var tactic = result.tactics[0];
 				var old_name = tactic.name;
 				tactic.name = new_name;
-				db.collection('users').updateOne({_id:user.identity}, {$push: {tactics:tactic}}, function(err) {
+				db.collection('users').updateOne({_id: { $eq: user.identity }}, {$push: {tactics:tactic}}, function(err) {
 					if (!err) {
-						db.collection('users').updateOne({_id:user.identity}, {$pull: {tactics:{uid:uid, name:old_name}}});
+						db.collection('users').updateOne({_id: { $eq: user.identity }}, {$pull: {tactics:{uid:uid, name:old_name}}});
 					}
 				});
 			}			
@@ -393,9 +393,9 @@ MongoClient.connect(connection_string, {reconnectTries:99999999}, function(err, 
 	
 	passport.serializeUser(function(user, done) {
 		if (user.wg_account_id) {
-			db.collection('users').updateOne({_id:user.identity}, {$set: { _id:user.identity, name:user.name, identity_provider:user.identity_provider, server:user.server, wg_id:user.wg_account_id}}, {upsert:true});
+			db.collection('users').updateOne({_id: { $eq: user.identity }}, {$set: { _id:user.identity, name:user.name, identity_provider:user.identity_provider, server:user.server, wg_id:user.wg_account_id}}, {upsert:true});
 		} else {
-			db.collection('users').updateOne({_id:user.identity}, {$set: { _id:user.identity, name:user.name, identity_provider:user.identity_provider}}, {upsert:true});
+			db.collection('users').updateOne({_id: { $eq: user.identity }}, {$set: { _id:user.identity, name:user.name, identity_provider:user.identity_provider}}, {upsert:true});
 		}
 		done(null, user);
 	});
@@ -510,11 +510,11 @@ MongoClient.connect(connection_string, {reconnectTries:99999999}, function(err, 
 			  setImmediate(function() {
 				  var link = "https://" + req.fullUrl;
 				  db.collection('users').updateOne(
-				  	  { _id:req.session.passport.user.identity },
+				  	  { _id:{$eq:req.session.passport.user.identity} },
 					  { "$pull": { "rooms": link } }
 				  )
 				  db.collection('users').updateOne(
-				  	  { _id:req.session.passport.user.identity },
+				  	  { _id:{$eq:req.session.passport.user.identity} },
 					  { "$push": { "rooms": { "$each": [link], "$slice": -10 } } }
 				  )
 			  });
@@ -554,7 +554,7 @@ MongoClient.connect(connection_string, {reconnectTries:99999999}, function(err, 
 				var users = data[i]				
 				for (var j in users) {
 					var user = users[j];
-					db.collection('ws_' + field + '_summary').replaceOne({_id:user._id}, user, {upsert:true});
+					db.collection('ws_' + field + '_summary').replaceOne({_id:{$eq:user._id}}, user, {upsert:true});
 				}
 			}
 			res.status(200).send('Received')
@@ -648,12 +648,12 @@ MongoClient.connect(connection_string, {reconnectTries:99999999}, function(err, 
 			var name = escaper.escape(decodeURIComponent(req.query.name));
 			var game = escaper.escape(decodeURIComponent(req.query.game));
 			
-			db.collection('users').findOne({_id:req.session.passport.user.identity, tactics:{$elemMatch:{name:name}}}, {'tactics.$':1}, function(err, result) { 					
+			db.collection('users').findOne({_id:{ $eq : req.session.passport.user.identity}, tactics:{$elemMatch:{name:name}}}, {'tactics.$':1}, function(err, result) { 					
 				if (!err && result && result.tactics) {
 					res.send("Error: A tactic with name: " + name + " already exists.");
 					return;
 				} else {
-					db.collection('users').updateOne({_id:req.session.passport.user.identity}, {$push:{tactics:{name:name, date:Date.now(), game:game, uid:uid}}}, {upsert: true}, function() {
+					db.collection('users').updateOne({_id:{ $eq : req.session.passport.user.identity}}, {$push:{tactics:{name:name, date:Date.now(), game:game, uid:uid}}}, {upsert: true}, function() {
 						res.redirect("/stored_tactics");
 					});
 				}
@@ -709,7 +709,7 @@ MongoClient.connect(connection_string, {reconnectTries:99999999}, function(err, 
 	}
 
 	function decorate_session(user, done) {
-		db.collection('users').findOne({_id:user.identity}, {no_ads:true}, function(err, result) {
+		db.collection('users').findOne({_id: { $eq: user.identity }}, {no_ads:true}, function(err, result) {
 			if (result && result.no_ads) {
 				user.no_ads = true;
 			}
@@ -744,13 +744,13 @@ MongoClient.connect(connection_string, {reconnectTries:99999999}, function(err, 
 				get_wg_data("/account/info/?", ["clan_id"], user.wg_account_id, function(data) {				
 					if (data) {
 						user.clan_id = String(data.clan_id);
-						db.collection('update_clans').replaceOne({_id:user.clan_id}, {_id:user.clan_id}, {upsert: true});
+						db.collection('update_clans').replaceOne({_id:{$eq:user.clan_id}}, {_id:user.clan_id}, {upsert: true});
 					}
 					resolve();
 				});
 			}))		
 			Promise.all(promises).then(function() {
-				db.collection('users').updateOne({_id:user.identity}, {$set: {name:user.name, identity_provider:user.identity_provider, server:user.server, wg_id:user.wg_account_id, clan_id:user.clan_id}}, {upsert:true});
+				db.collection('users').updateOne({_id: { $eq: user.identity }}, {$set: {name:user.name, identity_provider:user.identity_provider, server:user.server, wg_id:user.wg_account_id, clan_id:user.clan_id}}, {upsert:true});
 				done(null, user);
 			})
 		}
@@ -781,7 +781,7 @@ MongoClient.connect(connection_string, {reconnectTries:99999999}, function(err, 
 			user.identity_provider = "google";
 			user.name = profile.displayName;
 			
-			db.collection('users').updateOne({_id:user.identity}, {$set: {name:user.name, identity_provider:user.identity_provider}}, {upsert:true});
+			db.collection('users').updateOne({_id: { $eq: user.identity }}, {$set: {name:user.name, identity_provider:user.identity_provider}}, {upsert:true});
 			decorate_session(user, function() {
 				done(null, user);
 			});
@@ -813,7 +813,7 @@ MongoClient.connect(connection_string, {reconnectTries:99999999}, function(err, 
 			user.identity_provider = "vk";
 			user.name = profile.displayName;
 			
-			db.collection('users').updateOne({_id:user.identity}, {$set: {name:user.name, identity_provider:user.identity_provider}}, {upsert:true});
+			db.collection('users').updateOne({_id: { $eq: user.identity }}, {$set: {name:user.name, identity_provider:user.identity_provider}}, {upsert:true});
 			decorate_session(user, function() {
 				done(null, user);
 			});			
@@ -845,7 +845,7 @@ MongoClient.connect(connection_string, {reconnectTries:99999999}, function(err, 
 			user.identity_provider = "bnet";
 			user.name = profile.battletag;
 			
-			db.collection('users').updateOne({_id:user.identity}, {$set: {name:user.name, identity_provider:user.identity_provider}}, {upsert:true});
+			db.collection('users').updateOne({_id: { $eq: user.identity }}, {$set: {name:user.name, identity_provider:user.identity_provider}}, {upsert:true});
 			decorate_session(user, function() {
 				done(null, user);
 			});		
@@ -881,7 +881,7 @@ MongoClient.connect(connection_string, {reconnectTries:99999999}, function(err, 
 			user.identity_provider = "facebook";
 			user.name = profile.displayName;
 			
-			db.collection('users').updateOne({_id:user.identity}, {$set: {name:user.name, identity_provider:user.identity_provider}}, {upsert:true});
+			db.collection('users').updateOne({_id: { $eq: user.identity }}, {$set: {name:user.name, identity_provider:user.identity_provider}}, {upsert:true});
 			decorate_session(user, function() {
 				done(null, user);
 			});			
@@ -913,7 +913,7 @@ MongoClient.connect(connection_string, {reconnectTries:99999999}, function(err, 
 			user.identity_provider = "twitter";
 			user.name = profile.displayName;
 			
-			db.collection('users').updateOne({_id:user.identity}, {$set: {name:user.name, identity_provider:user.identity_provider}}, {upsert:true});
+			db.collection('users').updateOne({_id: { $eq: user.identity }}, {$set: {name:user.name, identity_provider:user.identity_provider}}, {upsert:true});
 			decorate_session(user, function() {
 				done(null, user);
 			});		
@@ -954,7 +954,7 @@ MongoClient.connect(connection_string, {reconnectTries:99999999}, function(err, 
 							user.name = result.response.players[0].personaname;
 						}
 						
-						db.collection('users').updateOne({_id:user.identity}, {$set: {name:user.name, identity_provider:user.identity_provider}}, {upsert:true});
+						db.collection('users').updateOne({_id: { $eq: user.identity }}, {$set: {name:user.name, identity_provider:user.identity_provider}}, {upsert:true});
 						decorate_session(user, function() {
 							done(null, user);
 						});
@@ -1029,7 +1029,7 @@ MongoClient.connect(connection_string, {reconnectTries:99999999}, function(err, 
 			
 			var source = req.body.source;
 			if (req.body.stored == "true") {
-				db.collection('stored_tactics').findOne({_id:source}, function(err, result) {
+				db.collection('stored_tactics').findOne({_id:{$eq:source}}, function(err, result) {
 					if (!err && result) { 
 						copy_slides(result, target, res, slide);
 					} else {
@@ -1037,7 +1037,7 @@ MongoClient.connect(connection_string, {reconnectTries:99999999}, function(err, 
 					}
 				});
 			} else {
-				db.collection('tactics').findOne({_id:source}, function(err, result) {
+				db.collection('tactics').findOne({_id:{$eq:source}}, function(err, result) {
 					if (!err && result) {
 						try {
 							if (!result.locked
@@ -1292,7 +1292,7 @@ MongoClient.connect(connection_string, {reconnectTries:99999999}, function(err, 
 		
 		socket.on('join_room', function(room, game) {			
 			if (!(room in room_data)) {
-				db.collection('tactics').findOne({_id:room}, function(err, result) {
+				db.collection('tactics').findOne({_id: { $eq: room }}, function(err, result) {
 					if (!err && result) {
 						if (!(room in room_data)) { //it may have been created already
 							room_data[room] = result;
